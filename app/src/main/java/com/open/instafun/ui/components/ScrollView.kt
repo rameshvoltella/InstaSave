@@ -1,4 +1,4 @@
-package com.open.instafun
+package com.open.instafun.ui.components
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*

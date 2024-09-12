@@ -19,7 +19,7 @@ class AppViewmodel @Inject constructor(val remoteRepository: RemoteRepository) :
 
 
 
-    fun getTrainPassingThroughStation(url:String)
+    fun getVideo(url:String)
     {
         viewModelScope.launch {
             remoteRepository.getVideoLink(url).collect{

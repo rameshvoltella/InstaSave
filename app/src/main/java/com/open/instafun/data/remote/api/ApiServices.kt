@@ -5,12 +5,13 @@ import com.open.instafun.data.dto.InstagramDownloader
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Header
+import retrofit2.http.POST
 import retrofit2.http.Url
 
 interface ApiServices {
 
 
-    @GET
+    @POST
     suspend fun getVideoLink(
         @Url url: String,
         @Header("x-apihub-key") key: String = "iD8GmEzCAPZM6byGbiw7hJ70nrbMXKknIAnzAwVc7a3UWlwL-8",
