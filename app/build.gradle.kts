@@ -99,6 +99,9 @@ dependencies {
     implementation (libs.androidx.room.runtime)
     implementation (libs.androidx.room.ktx)
     kapt (libs.androidx.room.compiler)
+//    implementation ("androidx.compose.material:material:1.4.0") // Use the latest version
+    implementation (libs.androidx.material)
+
 }
 kapt {
     correctErrorTypes = true
