@@ -15,25 +15,31 @@ import com.open.instafun.data.remote.RemoteRepository
 import com.open.instafun.database.InstagramDBDownloader
 import com.open.instafun.database.InstagramRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
+
 @HiltViewModel
-class AppViewmodel @Inject constructor(val remoteRepository: RemoteRepository,private val repository: InstagramRepository) : ViewModel()  {
-    val getVideoLinkPrivate =MutableLiveData<Resource<InstagramDownloader>>()
-    val getVideoLink :LiveData<Resource<InstagramDownloader>>get()=getVideoLinkPrivate
+class AppViewmodel @Inject constructor(
+    val remoteRepository: RemoteRepository,
+    private val repository: InstagramRepository
+) : ViewModel() {
+    val getVideoLinkPrivate = MutableLiveData<Resource<InstagramDownloader>>()
+    val getVideoLink: LiveData<Resource<InstagramDownloader>> get() = getVideoLinkPrivate
 
     // Store the index of the currently visible page
     var currentPageIndex by mutableStateOf(0)
         private set
+
     fun setCurrentPage(index: Int) {
         currentPageIndex = index
     }
 
-    fun getVideo(url:String)
-    {
+    fun getVideo(url: String) {
         viewModelScope.launch {
-            remoteRepository.getVideoLink(url).collect{
-                getVideoLinkPrivate.value=it
+            remoteRepository.getVideoLink(url).collect {
+                getVideoLinkPrivate.value = it
             }
         }
     }
@@ -50,6 +56,16 @@ class AppViewmodel @Inject constructor(val remoteRepository: RemoteRepository,pr
             downloads.clear()
             downloads.addAll(repository.getAllDownloads())
             isRefreshing = false
+        }
+    }
+
+    fun deleteVideo(video: InstagramDBDownloader) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                repository.delete(video)
+                refreshData()
+            }
+
         }
     }
 

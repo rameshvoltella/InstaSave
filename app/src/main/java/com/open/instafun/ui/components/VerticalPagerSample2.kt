@@ -57,7 +57,7 @@ fun VerticalPagerSample2(viewModel: AppViewmodel = hiltViewModel()) {
     ) { page ->
         val isPlaying = page == viewModel.currentPageIndex
         val download = viewModel.downloads.getOrNull(page)
-        MediaPlayerSample2(download?.downloadUrl ?: "",isPlaying)
+        CustomMediaPlayerWithImages(download?.downloadUrl ?: "",isPlaying)
     }
 }
 

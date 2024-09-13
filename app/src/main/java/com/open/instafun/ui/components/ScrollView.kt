@@ -1,5 +1,7 @@
 package com.open.instafun.ui.components
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -11,6 +13,17 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.material.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import com.open.instafun.R
+
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun VerticalPagerSample() {
@@ -66,7 +79,11 @@ fun MediaPlayerSample2(url: String, isPlaying: Boolean) {
 
     val mediaItem = MediaItem.fromUri(url)
     player.setMediaItem(mediaItem)
+    // Mute the player
+    player.volume = 0f
 
+    // Loop the video
+    player.repeatMode = ExoPlayer.REPEAT_MODE_ALL
     // Only play if the page is visible
     if (isPlaying) {
         player.prepare()
@@ -83,4 +100,234 @@ fun MediaPlayerSample2(url: String, isPlaying: Boolean) {
             }
         }
     )
+}
+
+
+
+
+@Composable
+fun CustomMediaPlayer(url: String, isPlaying: Boolean) {
+    val context = LocalContext.current
+    val player = remember { ExoPlayer.Builder(context).build() }
+
+    DisposableEffect(player) {
+        onDispose {
+            player.release()
+        }
+    }
+
+    val mediaItem = MediaItem.fromUri(url)
+    player.setMediaItem(mediaItem)
+    player.repeatMode = ExoPlayer.REPEAT_MODE_ALL
+    player.volume = 0f // Mute the player
+
+    var isControlVisible by remember { mutableStateOf(false) }
+    var playbackPosition by remember { mutableStateOf(0L) }
+    var duration by remember { mutableStateOf(0L) }
+
+    // To automatically hide controls after a delay
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            player.prepare()
+            player.playWhenReady = true
+        } else {
+            player.pause()
+        }
+
+        // Update duration and playback position periodically
+        while (isPlaying) {
+            duration = player.duration
+            playbackPosition = player.currentPosition
+            delay(1000) // Update every second
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    isControlVisible = !isControlVisible
+                    coroutineScope.launch {
+                        delay(3000)
+                        isControlVisible = false
+                    }
+                })
+            }
+    ) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = {
+                PlayerView(context).apply {
+                    this.player = player
+                    this.useController = false // Disable default controls
+                }
+            }
+        )
+
+        // Custom Play/Pause Button
+        if (isControlVisible) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .clickable {
+                        if (player.isPlaying) {
+                            player.pause()
+                        } else {
+                            player.play()
+                        }
+                    }
+            ) {
+
+                Image(
+                    painter = if (player.isPlaying) {
+                        painterResource(id = R.drawable.ic_player_pause) // Replace with your pause image
+                    } else {
+                        painterResource(id = R.drawable.ic_player_play) // Replace with your play image
+                    },
+                    contentDescription = if (player.isPlaying) "Pause" else "Play",
+                    modifier = Modifier.size(64.dp)
+                )
+
+            }
+
+            // Custom SeekBar
+            Slider(
+                value = playbackPosition.toFloat(),
+                onValueChange = {
+                    player.seekTo(it.toLong())
+                    playbackPosition = it.toLong()
+                },
+                valueRange = 0f..duration.toFloat(),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp)
+                    .fillMaxWidth()
+            )
+        }
+    }
+}
+
+
+@Composable
+fun CustomMediaPlayerWithImages(url: String, isPlaying: Boolean) {
+    val context = LocalContext.current
+    val player = remember { ExoPlayer.Builder(context).build() }
+
+    DisposableEffect(player) {
+        onDispose {
+            player.release()
+        }
+    }
+    player.repeatMode = ExoPlayer.REPEAT_MODE_ALL
+    player.volume = 0f // Mute the player
+
+    val mediaItem = MediaItem.fromUri(url)
+    var hasInitializedPlayer by remember { mutableStateOf(false) }
+    var isControlVisible by remember { mutableStateOf(false) }
+    var playbackPosition by remember { mutableStateOf(0L) }
+    var duration by remember { mutableStateOf(0L) }
+    var isUserSeeking by remember { mutableStateOf(false) } // To track if user is seeking manually
+
+    // To automatically hide controls after a delay
+    val coroutineScope = rememberCoroutineScope()
+
+    // Initialize the player and set the media item only once
+    LaunchedEffect(player, url) {
+        if (!hasInitializedPlayer) {
+            player.setMediaItem(mediaItem)
+            player.prepare()
+            hasInitializedPlayer = true
+        }
+    }
+
+    // Control the play/pause state
+    LaunchedEffect(isPlaying) {
+        if (isPlaying) {
+            player.playWhenReady = true
+        } else {
+            player.pause()
+        }
+
+        // Update duration and playback position periodically when playing
+        while (isPlaying) {
+            if (!isUserSeeking) {
+                duration = player.duration.takeIf { it > 0 } ?: 0L
+                playbackPosition = player.currentPosition
+            }
+            delay(1000) // Update every second
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = {
+                    isControlVisible = !isControlVisible
+                    coroutineScope.launch {
+                        delay(3000)
+                        isControlVisible = false
+                    }
+                })
+            }
+    ) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = {
+                PlayerView(context).apply {
+                    this.player = player
+                    this.useController = false // Disable default controls
+                }
+            }
+        )
+
+        // Custom Play/Pause Image Button
+        if (isControlVisible) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .clickable {
+                        if (player.isPlaying) {
+                            player.pause()
+                        } else {
+                            player.play()
+                        }
+                    }
+            ) {
+                Image(
+                    painter = if (player.isPlaying) {
+                        painterResource(id = R.drawable.ic_player_pause) // Replace with your pause image
+                    } else {
+                        painterResource(id = R.drawable.ic_player_play) // Replace with your play image
+                    },
+                    contentDescription = if (player.isPlaying) "Pause" else "Play",
+                    modifier = Modifier.size(64.dp)
+                )
+            }
+
+            // Custom SeekBar
+            if (duration > 0) {
+                Slider(
+                    value = playbackPosition.toFloat(),
+                    onValueChange = {
+                        isUserSeeking = true // User is interacting with the slider
+                        playbackPosition = it.toLong()
+                    },
+                    onValueChangeFinished = {
+                        // User finished seeking, update the player position
+                        player.seekTo(playbackPosition)
+                        isUserSeeking = false // Reset flag after seeking
+                    },
+                    valueRange = 0f..duration.toFloat(),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp)
+                        .fillMaxWidth()
+                )
+            }
+        }
+    }
 }
